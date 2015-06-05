@@ -1,0 +1,25 @@
+cache: apt
+
+language: go
+go:
+  - 1.4.2
+
+before_install:
+  - go get -v -u golang.org/x/tools/cmd/cover || go get -v -u code.google.com/p/go.tools/cmd/cover
+  - go get -v github.com/axw/gocov/gocov github.com/modocache/gover github.com/mattn/goveralls
+
+install:
+  - go get -t -v ./...
+
+script:
+  # test all sub-packages, merge into a single coverage output file, and send to coveralls.
+  # go cover outputs a coverage file only for root test dir,
+  # so we need to test each subpackage manually.
+  - go test -v -coverprofile=protocol.coverprofile ./protocol
+  - go test -v -coverprofile=algorithm.coverprofile ./algorithm
+  - go test -v -coverprofile=worker.coverprofile ./worker
+  - go test -v -coverprofile=master.coverprofile ./master
+  - go test -v -coverprofile=server.coverprofile ./server
+
+  - gover
+  - goveralls -v -coverprofile=gover.coverprofile -service=travis-ci
