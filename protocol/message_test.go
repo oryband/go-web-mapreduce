@@ -16,7 +16,7 @@ func mockNewMessageArguments() (mc, rc AlgorithmCode, input Input, mapMeta, redu
 	mc = AlgorithmCode("map")
 	rc = AlgorithmCode("reduce")
 	for i := 0; i < 5001; i++ {
-		input = append(input, InputValue(strconv.Itoa(i)))
+		input = append(input, NewMapInputValue("", strconv.Itoa(i)))
 	}
 	mapMeta = &Meta{
 		Type:    JobComplete,
@@ -77,10 +77,10 @@ func TestNewMessage(t *testing.T) {
 func TestMarshalMapOutput(t *testing.T) {
 	t.Parallel()
 
-	output := MapOutput{PartitionIndex(0): Input{"1", "2"}, PartitionIndex(3): Input{"3", "4"}}
+	output := mapOutput()
 	b, err := json.Marshal(&output)
 	require.NoError(t, err)
-	assert.Equal(t, `{"0":["1","2"],"3":["3","4"]}`, string(b))
+	assert.Equal(t, mapOutputString(), string(b))
 }
 
 func TestUnmarshalMapOutput(t *testing.T) {
@@ -90,13 +90,15 @@ func TestUnmarshalMapOutput(t *testing.T) {
 
 	// Test bad input.
 	var err error
-	require.NotPanics(t, func() { err = json.Unmarshal([]byte(`{"0":["1","2"],"xxx":["3","4"]}`), &out) })
+	require.NotPanics(t, func() {
+		err = json.Unmarshal([]byte(`{"0":[{"key":"","value":"1"},{"key":"","value":"2"}],"xxx":[{"key":"","value":"3"},{"key":"","value":"4"}]}`), &out)
+	})
 	require.Error(t, err)
 
 	// Test goot input.
-	b := []byte(`{"0":["1","2"],"3":["3","4"]}`)
+	b := []byte(mapOutputString())
 	require.NoError(t, json.Unmarshal(b, &out))
-	assert.Equal(t, MapOutput{PartitionIndex(0): Input{"1", "2"}, PartitionIndex(3): Input{"3", "4"}}, out)
+	assert.Equal(t, mapOutput(), out)
 }
 
 func TestMarshalMessage(t *testing.T) {
@@ -109,21 +111,21 @@ func TestMarshalMessage(t *testing.T) {
 			JobType: MapJob,
 			JobID:   JobID(id),
 		},
-		Input: Input{"1", "2", "3"},
+		Input: reduceOutput(),
 		Code:  AlgorithmCode("code"),
 	}
 
 	// Test marshalling a map job message.
 	b, err := json.Marshal(&m)
 	require.NoError(t, err)
-	assert.Equal(t, `{"meta":{"type":"job complete","jobType":"map","jobID":"`+id.String()+`"},"input":["1","2","3"],"code":"code"}`, string(b))
+	assert.Equal(t, `{"meta":{"type":"job complete","jobType":"map","jobID":"`+id.String()+`"},"input":[{"key":"","value":"1"},{"key":"","value":"2"},{"key":"","value":"3"}],"code":"code"}`, string(b))
 
 	// Test marshalling a reduce job message.
 	m.Meta.PartitionIndex = 1
 	m.Meta.JobType = ReduceJob
 	b, err = json.Marshal(&m)
 	require.NoError(t, err)
-	assert.Equal(t, `{"meta":{"type":"job complete","jobType":"reduce","jobID":"`+id.String()+`","partition":1},"input":["1","2","3"],"code":"code"}`, string(b))
+	assert.Equal(t, `{"meta":{"type":"job complete","jobType":"reduce","jobID":"`+id.String()+`","partition":1},"input":[{"key":"","value":"1"},{"key":"","value":"2"},{"key":"","value":"3"}],"code":"code"}`, string(b))
 }
 
 func TestUnmarshalMessage(t *testing.T) {
@@ -131,7 +133,7 @@ func TestUnmarshalMessage(t *testing.T) {
 
 	id := uuid.NewV4()
 
-	s := `{"meta":{"type":"job complete","jobType":"map","jobID":"` + id.String() + `"},"input":["1","2","3"],"code":"code"}`
+	s := `{"meta":{"type":"job complete","jobType":"map","jobID":"` + id.String() + `"},"input":[{"key":"","value":"1"},{"key":"","value":"2"},{"key":"","value":"3"}],"code":"code"}`
 
 	mm := Message{
 		Meta: &Meta{
@@ -139,7 +141,7 @@ func TestUnmarshalMessage(t *testing.T) {
 			JobType: MapJob,
 			JobID:   JobID(id),
 		},
-		Input: Input{"1", "2", "3"},
+		Input: reduceOutput(),
 		Code:  AlgorithmCode("code"),
 	}
 
@@ -149,21 +151,38 @@ func TestUnmarshalMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, &mm, &m)
 
-	s = `{"meta":{"type":"job complete","jobType":"map","jobID":"` + id.String() + `"},"map_output":{"0":["1","2"],"3":["3","4"]},"code":"code"}`
+	s = `{"meta":{"type":"job complete","jobType":"map","jobID":"` + id.String() + `"},"map_output":` + mapOutputString() + `,"code":"code"}`
 	mm.Input = nil
-	mm.MapOutput = MapOutput{PartitionIndex(0): Input{"1", "2"}, PartitionIndex(3): Input{"3", "4"}}
+	mm.MapOutput = mapOutput()
 	m = Message{}
 	require.NotPanics(t, func() { err = json.Unmarshal([]byte(s), &m) })
 	require.NoError(t, err)
 	require.Equal(t, &mm, &m)
 
-	s = `{"meta":{"type":"job complete","jobType":"reduce","jobID":"` + id.String() + `","partition":1},"reduce_output":["1","2","3"],"code":"code"}`
+	s = `{"meta":{"type":"job complete","jobType":"reduce","jobID":"` + id.String() + `","partition":1},"reduce_output":[{"key":"","value":"1"},{"key":"","value":"2"},{"key":"","value":"3"}],"code":"code"}`
 	mm.Meta.PartitionIndex = 1
 	mm.Meta.JobType = ReduceJob
 	mm.MapOutput = nil
-	mm.ReduceOutput = Input{"1", "2", "3"}
+	mm.ReduceOutput = reduceOutput()
 	m = Message{}
 	require.NotPanics(t, func() { err = json.Unmarshal([]byte(s), &m) })
 	require.NoError(t, err)
 	require.Equal(t, &mm, &m)
+}
+
+// mapOutput is a helper function that returns a stub MapOutput for testing.
+func mapOutput() MapOutput {
+	return MapOutput{
+		PartitionIndex(0): Input{NewReduceInputValue("", []string{"1", "2"}), NewReduceInputValue("", []string{"3", "4"})},
+		PartitionIndex(3): Input{NewReduceInputValue("", []string{"5", "6"}), NewReduceInputValue("", []string{"7", "8"})}}
+}
+
+// reduceOutput is a helper function that returns a stub reduce output for testing.
+func reduceOutput() Input {
+	return Input{NewMapInputValue("", "1"), NewMapInputValue("", "2"), NewMapInputValue("", "3")}
+}
+
+// mapOutputString is a helper function that returns a stub MapOutput string for testing.
+func mapOutputString() string {
+	return `{"0":[{"key":"","values":["1","2"]},{"key":"","values":["3","4"]}],"3":[{"key":"","values":["5","6"]},{"key":"","values":["7","8"]}]}`
 }

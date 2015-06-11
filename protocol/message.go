@@ -6,6 +6,9 @@ import (
 	"strconv"
 )
 
+// PartitionIndex is a reduce job's partition index.
+type PartitionIndex uint64
+
 // MapOutput is the map job output sent from the worker to the master.
 // It is a map and not a slice in order to save space,
 // by skipping allocating space for partitions with no output.
@@ -69,17 +72,13 @@ type Message struct {
 
 // Meta is a message associated metadata.
 // E.g. intermediary key location upon completing a map job.
+//
+// TODO try adding 'string` json struct tag instead of implementing un/marshalJSON.
 type Meta struct {
-	Type    MessageType `json:"type"`    // Message type.
-	JobType JobType     `json:"jobType"` // Map or Reduce job.
-	JobID   JobID       `json:"jobID"`   // Job ID whose message relates too.
-
-	// Reduce job's partition input index. Missing in messages from worker.
-	// The reason this is a string type is so we could use "omitempty" struct tag and
-	// check for invalid values.
-	// If we would've made this an int, partition #0 would be omitted
-	// and we couldn't be sure that it was set properly when calling NewMessage().
-	PartitionIndex PartitionIndex `json:"partition,omitempty"`
+	Type           MessageType    `json:"type"`                // Message type.
+	JobType        JobType        `json:"jobType"`             // Map or Reduce job.
+	JobID          JobID          `json:"jobID"`               // Job ID whose message relates too.
+	PartitionIndex PartitionIndex `json:"partition,omitempty"` // Reduce job's partition input index. Missing in messages from worker.
 }
 
 // NewMessage returns a new message using given metadata type and data.
