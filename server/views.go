@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,15 +40,35 @@ func init() {
 	// Used for assigning each new worker to a random available master.
 	rand.Seed(time.Now().UnixNano())
 
+	baconIpsum := `pastrami beef ribs bacon tri-tip fatback turkey ham biltong pork t-bone brisket tail kevin boudin pork loin ham hock ground round flank frankfurter sausage shankle flank pig pancetta brisket porchetta beef bacon pork chop shankle fatback landjaeger biltong tenderloin`
+
+	input := make(protocol.Input, 0)
+	for _, word := range strings.Split(baconIpsum, " ") {
+		input = append(input, protocol.NewMapInputValue("", word))
+	}
+
 	// Initialize an example algorithm.
 	m := master.New(
 		100,
-		`(function(k,v){return ["1",k];})`,
-		`(function(k,vs){var x=[]; $.each(vs,function(_,v){x+=JSON.parse(v);}); return x;})`,
-		3, 2, protocol.Input{"1", "2", "3", "4", "5", "6", "7", "8", "9"})
+		`(function(o) {
+			return [o.value.length % 2, {key: o.value, value: "1"}];
+		})`,
+
+		`(function(o) {
+			return {key: o.key, value: JSON.stringify(o.values.length)};
+		})`,
+
+		10, 2, input)
 
 	masters = append(masters, m)
 	m.Start()
+
+	go func() {
+		<-m.CompletedChannel()
+		for _, r := range m.Results() {
+			log.WithFields(log.Fields{"key": r.K, "value": *r.V}).Warn("result")
+		}
+	}()
 }
 
 // Index returns the index page.

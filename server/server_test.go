@@ -67,8 +67,8 @@ func (s *ServerSuite) TestAddAlgorithm() {
 	req := NewAlgorithmRequest{
 		MapInputLen: 1,
 		MapCode:     `"hello world map"`,
-		ReduceCode:  `hello world reduce"`,
-		Input:       protocol.Input{"1", "2"},
+		ReduceCode:  `"hello world reduce"`,
+		Input:       protocol.Input{protocol.NewMapInputValue("", "1"), protocol.NewMapInputValue("", "2")},
 	}
 
 	b, err := json.Marshal(&req)

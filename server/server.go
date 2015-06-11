@@ -18,7 +18,7 @@ import (
 
 const (
 	ginMode = "debug"
-	Addr    = "localhost:6060"
+	Addr    = "0.0.0.0:80"
 )
 
 func init() {
