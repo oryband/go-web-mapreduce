@@ -14,7 +14,7 @@ import (
 func args() (protocol.Input, protocol.AlgorithmCode, protocol.JobID) {
 	var input protocol.Input
 	for i := 0; i < 5001; i++ {
-		input = append(input, protocol.InputValue(strconv.Itoa(i)))
+		input = append(input, protocol.NewMapInputValue("", strconv.Itoa(i)))
 	}
 
 	code := protocol.AlgorithmCode("code")

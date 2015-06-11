@@ -14,7 +14,7 @@ func NewMockAlgorithm(totalSize, size, reduceJobs int) (
 	input protocol.Input) {
 
 	for i := 0; i < totalSize; i++ {
-		input = append(input, protocol.InputValue(strconv.Itoa(i)))
+		input = append(input, protocol.NewMapInputValue("", strconv.Itoa(i)))
 	}
 	mapCode = protocol.AlgorithmCode("map")
 	reduceCode = protocol.AlgorithmCode("reduce")

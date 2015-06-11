@@ -45,6 +45,8 @@ type Algorithm struct {
 	// initialized and pushed to unassignedReduceJobs.
 	unsetReduceJobs chan struct{}
 
+	results protocol.Input // Final results will be saved here.
+
 	done    chan struct{}  // Closed when algorithm closes, and used to stop algorithm goroutines.
 	closing sync.WaitGroup // Used to block Close() method until goroutines exit.
 }
@@ -94,7 +96,7 @@ func NewAlgorithm(
 		id := protocol.JobID(uuid.NewV4())
 
 		// Fetch current job's input slice from total input.
-		input := totalInput[job*inputLen : int(math.Min(float64(1+len(totalInput)), float64((job+1)*inputLen)))]
+		input := totalInput[job*inputLen : int(math.Min(float64(len(totalInput)), float64((job+1)*inputLen)))]
 
 		// Push new job to map jobs queue.
 		maps <- newJob(id, input, 0, mapCode, true)
@@ -163,15 +165,23 @@ MapPhase:
 			if a.IsMapJobsComplete() {
 				a.RLock()
 
+				// TODO this whole part needs to be tested.
 				for index, partition := range a.partitions {
-					mergedInputs := make(protocol.Input, 0)
-					for _, inputs := range partition {
-						mergedInputs = append(mergedInputs, inputs...)
+					merged := make(map[string][]string)
+					for _, outputs := range partition {
+						for _, output := range outputs {
+							merged[output.K] = append(merged[output.K], *output.V)
+						}
+					}
+
+					input := make(protocol.Input, 0)
+					for k, vs := range merged {
+						input = append(input, protocol.NewReduceInputValue(k, vs))
 					}
 
 					// Create a new reduce job for current partition, and push to unassigned channel.
 					id := protocol.JobID(uuid.NewV4())
-					j := newJob(id, mergedInputs, protocol.PartitionIndex(index), a.reduceCode, false)
+					j := newJob(id, input, protocol.PartitionIndex(index), a.reduceCode, false)
 					a.unassignedReduceJobs <- j
 					<-a.unsetReduceJobs
 
@@ -304,7 +314,7 @@ func (a *Algorithm) CompleteMapJob(id protocol.JobID, partitions map[protocol.Pa
 // CompleteReduceJob removes the reduce job from the un/assigned job queues,
 // and saves its output to disk.
 //
-// TODO What should we do on every completed reduce job? Nothing? copy output to disk?
+// TODO add tests.
 func (a *Algorithm) CompleteReduceJob(id protocol.JobID, output protocol.Input) {
 	if !a.IsMapJobsComplete() {
 		panic("trying to complete reduce job but map jobs are incomplete")
@@ -319,9 +329,17 @@ func (a *Algorithm) CompleteReduceJob(id protocol.JobID, output protocol.Input) 
 	defer a.logJobInfo(j, "finished processing complete reduce job")
 
 	j.Complete()
-
 	delete(a.assignedReduceJobs, id)
+
+	a.results = append(a.results, output...)
 }
+
+// Results return the algorithm's results list.
+//
+// NOTE this might be nil if called before algorithm is complete.
+//
+// TODO test this.
+func (a *Algorithm) Results() protocol.Input { return a.results }
 
 func (a *Algorithm) logJobInfo(j *Job, msg string) { log.WithField("job", j).Info(msg) }
 
