@@ -29,7 +29,7 @@ func MockMapJobOutput(totalSize, size int, partitions []int) map[protocol.Partit
 		pi := protocol.PartitionIndex(i)
 		ps[pi] = make(protocol.Input, 0) // pi means Partition Index
 		for j := 0; j < size; j++ {
-			ps[pi] = append(ps[pi], protocol.InputValue(fmt.Sprintf("%.5f", 10000*i+j)))
+			ps[pi] = append(ps[pi], protocol.NewMapInputValue("", fmt.Sprintf("%.5f", 10000*i+j)))
 		}
 	}
 	return ps
@@ -39,7 +39,7 @@ func MockMapJobOutput(totalSize, size int, partitions []int) map[protocol.Partit
 func MockReduceJobOutput(size int) protocol.Input {
 	var output protocol.Input
 	for i := 0; i < size; i++ {
-		output = append(output, protocol.InputValue(fmt.Sprintf("%.3f", i)))
+		output = append(output, protocol.NewMapInputValue("", fmt.Sprintf("%.3f", i)))
 	}
 	return output
 }
