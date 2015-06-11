@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -261,13 +260,7 @@ func (s *MasterSuite) TestSerialAssignAndCompleteJobs() {
 
 	for i := 0; i < mapJobs; i++ {
 		for index, partition := range test.MockMapJobOutput(totalInputSize, mockMapOutputSize, []int{0, 2, 4}) {
-			var merged protocol.Input
-			for _, v := range partition {
-				merged = append(merged, v)
-			}
-
-			j, _ := strconv.ParseInt(string(index), 10, 64)
-			partitions[j] = append(partitions[j], merged...)
+			partitions[index] = append(partitions[index], partition...)
 		}
 	}
 

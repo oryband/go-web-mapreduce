@@ -214,3 +214,10 @@ func (m *Master) String() string { return m.ID().String() }
 
 // CompletedChannel returns the master's algorithm completion nofitication channel.
 func (m *Master) CompletedChannel() <-chan struct{} { return m.algorithm.CompletedChannel() }
+
+// Results return the algorithm's results list.
+//
+// NOTE this might be nil if called before algorithm is complete.
+//
+// TODO test this.
+func (m *Master) Results() protocol.Input { return m.algorithm.Results() }
