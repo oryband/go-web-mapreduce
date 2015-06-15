@@ -89,8 +89,8 @@ $ go test -v -cover ./...
 [godoc image]: https://godoc.org/github.com/oryband/go-web-mapreduce?status.svg
 [travis image]: https://travis-ci.org/oryband/go-web-mapreduce.svg
 [travis]: https://travis-ci.org/oryband/go-web-mapreduce
-[coveralls image]: https://coveralls.io/repos/oryband/go-web-mapreduce/badge.svg
-[coveralls]: https://coveralls.io/r/oryband/go-web-mapreduce
+[coveralls image]: https://coveralls.io/repos/oryband/go-web-mapreduce/badge.svg?branch=master
+[coveralls]: https://coveralls.io/r/oryband/go-web-mapreduce?branch=master
 [go]: https://golang.org
 [go-dl]: https://golang.org/doc/install
 [mapreduce]: http://en.wikipedia.org/wiki/MapReduce
