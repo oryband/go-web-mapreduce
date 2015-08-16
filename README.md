@@ -97,6 +97,7 @@ $ go test -v -cover ./...
 [websockets]: https://developer.mozilla.org/en/docs/WebSockets
 [webworkers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [concurrency]: https://golang.org/doc/effective_go.html#concurrency
+[sockjs]: https://github.com/igm/sockjs-go/
 [gopher worker]: https://golang.org/doc/gopher/ref.png
 [gopher master]: https://golang.org/doc/gopher/talks.png
 [renee french]: http://reneefrench.blogspot.com
